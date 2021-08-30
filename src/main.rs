@@ -7,6 +7,8 @@ use std::sync::Arc;
 use std::thread;
 use std::{io::BufReader, path::PathBuf, str::FromStr};
 
+mod command;
+
 struct Cli {
     path: PathBuf,
 }
@@ -49,33 +51,21 @@ fn main() {
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
 
-        let (command, args) = {
-            let parts = input.trim().split_whitespace().collect::<Vec<_>>();
-            let command = parts.first().unwrap().clone().to_string();
-            let mut args = Vec::new();
+        let command = command::Command::from_input(input);
 
-            for arg in parts.iter().skip(1) {
-                args.push(arg.to_owned().to_string())
-            }
-
-            (command, args)
-        };
-
-        if &command == "exit" {
+        if &command.name == "exit" {
             break;
         }
 
         let arc_cmd = Arc::new(command);
-        let arc_args = Arc::new(args);
 
         for terminal in clone_terminals {
             let txc = tx.clone();
-            let cmd = arc_cmd.clone();
-            let args = arc_args.clone();
+            let cmd = Arc::clone(&arc_cmd);
 
             thread::spawn(move || {
-                let child = Command::new(cmd.to_string())
-                    .args(args.iter())
+                let child = Command::new(cmd.name.clone())
+                    .args(cmd.args.clone())
                     .current_dir(PathBuf::from(terminal.path))
                     .output()
                     .expect("Worked fine");
@@ -83,7 +73,7 @@ fn main() {
                 txc.send(Output {
                     terminal_name: terminal.name.clone(),
                     output: child.stdout.clone(),
-                    command: format!("{} {}", cmd.to_string(), args.join(" ").to_string()),
+                    command: format!("{} {}", cmd.name, cmd.args.join(" ").to_string()),
                 })
                 .unwrap();
             });
@@ -92,7 +82,7 @@ fn main() {
         for _ in 0..len {
             let received = rx.recv().unwrap();
             println!(
-                "{}> {}\n{}",
+                "[{}]> {}\n{}",
                 received.terminal_name,
                 received.command,
                 std::str::from_utf8(&received.output).unwrap()
