@@ -24,6 +24,9 @@ Create a yaml file with your projects that you want to multiplex the commands.
 
 - name: PJ2
   path: /path/to/your/project2
+
+- name: PJ3
+  path: /path/to/your/project3
 ```
 
 ## How to use:
@@ -34,5 +37,26 @@ Create a yaml file with your projects that you want to multiplex the commands.
 > git describe
 
 [PJ1]> git describe
+...
+
 [PJ2]> git describe
+
+...
+[PJ3]> git describe
+...
+```
+
+## Improvement plan
+
+- Properly parsing single/double quoted arguments
+- Using pipelines in multiple terminals
+- Lock and run a simple command only in a couple of terminals
+
+``` bash
+> lock PJ1 PJ3
+> ... run {command}
+[PJ1]> {command}
+[PJ3]> {command}
+
+> unlock
 ```

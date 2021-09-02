@@ -1,7 +1,11 @@
 [package]
 name = "sila"
 version = "0.1.0"
+description = "A command line tool to multiplex the same command in multiple terminals" 
 edition = "2018"
+license = "MIT OR Apache-2.0"
+keywords = ["cli", "productivity"]
+repository = "https://github.com/alxolr/sila"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

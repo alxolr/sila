@@ -6,20 +6,48 @@ pub struct Command {
 
 impl Command {
     pub fn from_input(input: String) -> Self {
-        let iter: Vec<String> = input
-            .trim()
-            .split_whitespace()
-            .into_iter()
-            .map(|c| c.clone().to_string())
-            .collect();
+        let things = {
+            let mut iter = Vec::new();
+            let mut buffer = Vec::new();
+            for ch in input.trim().chars() {
+                if ch == ' ' {
+                    // check if the space is inside the single or double slashes then include the space
+                    if (buffer.contains(&'\'') && is_even(count_char(&buffer, &ch)))
+                        || (buffer.contains(&'"') && is_even(count_char(&buffer, &ch)))
+                    {
+                        buffer.push(ch);
+                    } else {
+                        // push the the result in the iterator and flush the buffer
+                        let word = buffer.iter().collect::<String>();
+                        iter.push(word);
+                        buffer = Vec::new();
+                    }
+                } else {
+                    buffer.push(ch);
+                }
+            }
 
-        let name = iter.first().unwrap().clone();
-        let args: Vec<String> = iter.into_iter().skip(1).collect();
+            if buffer.len() > 0 {
+                iter.push(buffer.iter().collect::<String>())
+            }
+
+            iter
+        };
+
+        let name = things.first().unwrap().clone();
+        let args: Vec<String> = things.into_iter().skip(1).collect();
 
         Command { name, args }
     }
 }
 
+fn count_char(vec: &Vec<char>, c: &char) -> usize {
+    vec.iter().filter(|ch| *ch == c).count()
+}
+
+fn is_even(nb: usize) -> bool {
+    nb % 2 == 0
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,7 +79,7 @@ mod tests {
 
     #[test]
     fn parse_commands_with_single_slashes() {
-        let input = "git tag -a -m 'Some interesting tag name'".to_string();
+        let input = "git tag -a -m 'Some test'".to_string();
         assert_eq!(
             Command::from_input(input),
             Command {
@@ -60,7 +88,7 @@ mod tests {
                     "tag".to_string(),
                     "-a".to_string(),
                     "-m".to_string(),
-                    "'Some interesting tag name'".to_string()
+                    "'Some test'".to_string()
                 ]
             }
         )
