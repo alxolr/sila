@@ -1,6 +1,6 @@
 [package]
 name = "sila"
-version = "0.1.0"
+version = "0.1.2"
 description = "A command line tool to multiplex the same command in multiple terminals" 
 edition = "2018"
 license = "MIT OR Apache-2.0"

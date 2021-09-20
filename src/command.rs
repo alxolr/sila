@@ -9,12 +9,10 @@ impl Command {
         let things = {
             let mut iter = Vec::new();
             let mut buffer = Vec::new();
+
             for ch in input.trim().chars() {
                 if ch == ' ' {
-                    // check if the space is inside the single or double slashes then include the space
-                    if (buffer.contains(&'\'') && is_even(count_char(&buffer, &ch)))
-                        || (buffer.contains(&'"') && is_even(count_char(&buffer, &ch)))
-                    {
+                    if !quotes_are_closed(&buffer) {
                         buffer.push(ch);
                     } else {
                         // push the the result in the iterator and flush the buffer
@@ -41,7 +39,19 @@ impl Command {
     }
 }
 
-fn count_char(vec: &Vec<char>, c: &char) -> usize {
+fn quotes_are_closed(buffer: &Vec<char>) -> bool {
+    if buffer.contains(&'\'') && buffer.contains(&'"') {
+        return is_even(count_occurences(buffer, &'\'')) && is_even(count_occurences(buffer, &'"'));
+    } else if buffer.contains(&'\'') {
+        return is_even(count_occurences(buffer, &'\''));
+    } else if buffer.contains(&'"') {
+        return is_even(count_occurences(buffer, &'"'));
+    }
+
+    true
+}
+
+fn count_occurences(vec: &Vec<char>, c: &char) -> usize {
     vec.iter().filter(|ch| *ch == c).count()
 }
 
@@ -92,5 +102,72 @@ mod tests {
                 ]
             }
         )
+    }
+
+    #[test]
+    fn parse_commands_with_single_slashes_multiple_arguments() {
+        let input = "git tag -a -m 'Some test' --dry_run".to_string();
+        assert_eq!(
+            Command::from_input(input),
+            Command {
+                name: "git".to_string(),
+                args: vec![
+                    "tag".to_string(),
+                    "-a".to_string(),
+                    "-m".to_string(),
+                    "'Some test'".to_string(),
+                    "--dry_run".to_string()
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn parse_commands_with_double_slashes_multiple_arguments() {
+        let input = r#"git tag -a -m "Some test" --dry_run"#.to_string();
+        assert_eq!(
+            Command::from_input(input),
+            Command {
+                name: "git".to_string(),
+                args: vec![
+                    "tag".to_string(),
+                    "-a".to_string(),
+                    "-m".to_string(),
+                    r#""Some test""#.to_string(),
+                    "--dry_run".to_string()
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn parse_commands_with_mixed_slashes_multiple_arguments() {
+        let input = r#"git tag -a -m "Some test 'appears here'" --dry_run"#.to_string();
+        assert_eq!(
+            Command::from_input(input),
+            Command {
+                name: "git".to_string(),
+                args: vec![
+                    "tag".to_string(),
+                    "-a".to_string(),
+                    "-m".to_string(),
+                    r#""Some test 'appears here'""#.to_string(),
+                    "--dry_run".to_string()
+                ]
+            }
+        );
+    }
+
+    #[test]
+    fn check_should_continue_to_add() {
+        let scenarios = vec![
+            ("Some test '".chars().collect::<Vec<_>>(), false),
+            ("Some test 'test'".chars().collect::<Vec<_>>(), true),
+            (r#"Some test "test""#.chars().collect::<Vec<_>>(), true),
+        ];
+
+        for (buffer, expected) in scenarios {
+            assert_eq!(quotes_are_closed(&buffer), expected);
+        }
     }
 }

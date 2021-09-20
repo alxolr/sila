@@ -2,7 +2,7 @@
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
 
-_sila_ - in pali language stands for morality, in russian means power. So it's somewhat a moral power.
+_sila_ - reads [shila] in pali language stands for morality;
 
 
 ## Install

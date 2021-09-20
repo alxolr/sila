@@ -43,8 +43,6 @@ fn main() {
 
     loop {
         let clone_terminals = terminals.clone();
-        // use the `>` character as the prompt
-        // need to explicitly flush this to ensure it prints before read_line
         print!("> ");
         stdout().flush().unwrap();
 
