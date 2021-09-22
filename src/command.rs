@@ -26,7 +26,7 @@ impl Command {
             }
 
             if buffer.len() > 0 {
-                iter.push(buffer.iter().collect::<String>())
+                iter.push(buffer.iter().collect::<String>());
             }
 
             iter
@@ -63,99 +63,84 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_one_word_command() {
-        let input = "git".to_string();
-
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: Vec::new()
-            }
-        )
-    }
-
-    #[test]
     fn parse_command_with_arguments() {
-        let input = "git describe".to_string();
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: vec!["describe".to_string()]
-            }
-        )
-    }
-
-    #[test]
-    fn parse_commands_with_single_slashes() {
-        let input = "git tag -a -m 'Some test'".to_string();
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: vec![
-                    "tag".to_string(),
-                    "-a".to_string(),
-                    "-m".to_string(),
-                    "'Some test'".to_string()
-                ]
-            }
-        )
-    }
-
-    #[test]
-    fn parse_commands_with_single_slashes_multiple_arguments() {
-        let input = "git tag -a -m 'Some test' --dry_run".to_string();
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: vec![
-                    "tag".to_string(),
-                    "-a".to_string(),
-                    "-m".to_string(),
-                    "'Some test'".to_string(),
-                    "--dry_run".to_string()
-                ]
-            }
-        );
-    }
-
-    #[test]
-    fn parse_commands_with_double_slashes_multiple_arguments() {
-        let input = r#"git tag -a -m "Some test" --dry_run"#.to_string();
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: vec![
-                    "tag".to_string(),
-                    "-a".to_string(),
-                    "-m".to_string(),
-                    r#""Some test""#.to_string(),
-                    "--dry_run".to_string()
-                ]
-            }
-        );
-    }
-
-    #[test]
-    fn parse_commands_with_mixed_slashes_multiple_arguments() {
-        let input = r#"git tag -a -m "Some test 'appears here'" --dry_run"#.to_string();
-        assert_eq!(
-            Command::from_input(input),
-            Command {
-                name: "git".to_string(),
-                args: vec![
-                    "tag".to_string(),
-                    "-a".to_string(),
-                    "-m".to_string(),
-                    r#""Some test 'appears here'""#.to_string(),
-                    "--dry_run".to_string()
-                ]
-            }
-        );
+        let scenarios = vec![
+            (
+                "git".to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: Vec::new(),
+                },
+            ),
+            (
+                "git describe".to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: vec!["describe".to_string()],
+                },
+            ),
+            (
+                "git tag -a -m 'Some test'".to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: vec![
+                        "tag".to_string(),
+                        "-a".to_string(),
+                        "-m".to_string(),
+                        "'Some test'".to_string(),
+                    ],
+                },
+            ),
+            (
+                "git tag -a -m 'Some test' --dry_run".to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: vec![
+                        "tag".to_string(),
+                        "-a".to_string(),
+                        "-m".to_string(),
+                        "'Some test'".to_string(),
+                        "--dry_run".to_string(),
+                    ],
+                },
+            ),
+            (
+                r#"git tag -a -m "Some test" --dry_run"#.to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: vec![
+                        "tag".to_string(),
+                        "-a".to_string(),
+                        "-m".to_string(),
+                        r#""Some test""#.to_string(),
+                        "--dry_run".to_string(),
+                    ],
+                },
+            ),
+            (
+                r#"git tag -a -m "Some test 'appears here'" --dry_run"#.to_string(),
+                Command {
+                    name: "git".to_string(),
+                    args: vec![
+                        "tag".to_string(),
+                        "-a".to_string(),
+                        "-m".to_string(),
+                        r#""Some test 'appears here'""#.to_string(),
+                        "--dry_run".to_string(),
+                    ],
+                },
+            ),
+            (
+                r#"ncu "/@conform\/batch.*/""#.to_string(),
+                Command {
+                    name: "ncu".to_string(),
+                    args: vec!["\"/@conform\\/batch.*/\"".to_string()],
+                },
+            ),
+        ];
+        for (input, output) in scenarios {
+            assert_eq!(Command::from_input(input), output);
+        }
     }
 
     #[test]

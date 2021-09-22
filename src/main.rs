@@ -31,7 +31,6 @@ struct Output {
     output: Vec<u8>,
     command: String,
 }
-
 fn main() {
     let file_path = std::env::args().nth(1).expect("Could not parse file path");
     let cli = Cli::new(PathBuf::from_str(&file_path).unwrap());
@@ -51,40 +50,42 @@ fn main() {
 
         let command = command::Command::from_input(input);
 
-        if &command.name == "exit" {
-            break;
-        }
+        match command.name.as_ref() {
+            "exit" => return,
+            "count" => println!("{} terminals", len),
+            _ => {
+                let arc_cmd = Arc::new(command);
 
-        let arc_cmd = Arc::new(command);
+                for terminal in clone_terminals {
+                    let txc = tx.clone();
+                    let cmd = Arc::clone(&arc_cmd);
 
-        for terminal in clone_terminals {
-            let txc = tx.clone();
-            let cmd = Arc::clone(&arc_cmd);
+                    thread::spawn(move || {
+                        let child = Command::new(cmd.name.clone())
+                            .args(cmd.args.clone())
+                            .current_dir(PathBuf::from(terminal.path))
+                            .output()
+                            .expect("Worked fine");
 
-            thread::spawn(move || {
-                let child = Command::new(cmd.name.clone())
-                    .args(cmd.args.clone())
-                    .current_dir(PathBuf::from(terminal.path))
-                    .output()
-                    .expect("Worked fine");
+                        txc.send(Output {
+                            terminal_name: terminal.name.clone(),
+                            output: child.stdout.clone(),
+                            command: format!("{} {}", cmd.name, cmd.args.join(" ").to_string()),
+                        })
+                        .unwrap();
+                    });
+                }
 
-                txc.send(Output {
-                    terminal_name: terminal.name.clone(),
-                    output: child.stdout.clone(),
-                    command: format!("{} {}", cmd.name, cmd.args.join(" ").to_string()),
-                })
-                .unwrap();
-            });
-        }
-
-        for _ in 0..len {
-            let received = rx.recv().unwrap();
-            println!(
-                "[{}]> {}\n{}",
-                received.terminal_name,
-                received.command,
-                std::str::from_utf8(&received.output).unwrap()
-            );
-        }
+                for _ in 0..len {
+                    let received = rx.recv().unwrap();
+                    println!(
+                        "[{}]> {}\n{}",
+                        received.terminal_name,
+                        received.command,
+                        std::str::from_utf8(&received.output).unwrap()
+                    );
+                }
+            }
+        };
     }
 }
