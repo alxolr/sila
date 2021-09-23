@@ -1,24 +1,27 @@
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::io::Write;
 use std::io::{stdin, stdout};
 use std::process::Command;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
-use std::{io::BufReader, path::PathBuf, str::FromStr};
+use std::{io::BufReader, path::PathBuf};
+use structopt::StructOpt;
 
 mod command;
 
+#[derive(StructOpt, Debug)]
+#[structopt(
+    version = "0.1.2",
+    about = "Terminal multiplexer",
+    author = "Alexandru Olaru <alxolr@gmail.com>",
+    rename_all = "kebab-case"
+)]
 struct Cli {
+    #[structopt(help = "Provide configuration yaml file")]
     path: PathBuf,
 }
-
-impl Cli {
-    fn new(path: PathBuf) -> Self {
-        Cli { path }
-    }
-}
-
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 struct Terminal {
     name: String,
@@ -31,9 +34,9 @@ struct Output {
     output: Vec<u8>,
     command: String,
 }
-fn main() {
-    let file_path = std::env::args().nth(1).expect("Could not parse file path");
-    let cli = Cli::new(PathBuf::from_str(&file_path).unwrap());
+
+fn run() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::from_args();
     let input = std::fs::File::open(cli.path).unwrap();
     let rdr = BufReader::new(input);
     let terminals: Vec<Terminal> = serde_yaml::from_reader(rdr).unwrap();
@@ -51,7 +54,7 @@ fn main() {
         let command = command::Command::from_input(input);
 
         match command.name.as_ref() {
-            "exit" => return,
+            "exit" => break,
             "count" => println!("{} terminals", len),
             _ => {
                 let arc_cmd = Arc::new(command);
@@ -87,5 +90,14 @@ fn main() {
                 }
             }
         };
+    }
+
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = run() {
+        println!("Sila Experienced an Error: {}", e);
+        std::process::exit(1);
     }
 }
