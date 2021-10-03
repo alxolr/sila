@@ -2,18 +2,20 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::io::Write;
 use std::io::{stdin, stdout};
-use std::process::Command;
+use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
 use std::{io::BufReader, path::PathBuf};
 use structopt::StructOpt;
 
+use crate::command::Command as SilaCommand;
+
 mod command;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    version = "0.1.2",
+    version = "0.2.0",
     about = "Terminal multiplexer",
     author = "Alexandru Olaru <alxolr@gmail.com>",
     rename_all = "kebab-case"
@@ -51,31 +53,75 @@ fn run() -> Result<(), Box<dyn Error>> {
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
 
-        let command = command::Command::from_input(input);
+        let commands = if input.contains('|') {
+            input
+                .split('|')
+                .into_iter()
+                .map(|cmd| SilaCommand::from_input(cmd.to_string()))
+                .collect::<Vec<SilaCommand>>()
+        } else {
+            let mut vec = Vec::new();
+            vec.push(SilaCommand::from_input(input));
 
-        match command.name.as_ref() {
+            vec
+        };
+
+        match commands.first().unwrap().name.as_ref() {
             "exit" => break,
             "count" => println!("{} terminals", len),
             _ => {
-                let arc_cmd = Arc::new(command);
+                let arc_cmds = Arc::new(commands);
 
                 for terminal in clone_terminals {
                     let txc = tx.clone();
-                    let cmd = Arc::clone(&arc_cmd);
+                    let cmds = Arc::clone(&arc_cmds);
 
                     thread::spawn(move || {
-                        let child = Command::new(cmd.name.clone())
-                            .args(cmd.args.clone())
-                            .current_dir(PathBuf::from(terminal.path))
-                            .output()
-                            .expect("Worked fine");
+                        let commands = cmds.clone();
 
-                        txc.send(Output {
-                            terminal_name: terminal.name.clone(),
-                            output: child.stdout.clone(),
-                            command: format!("{} {}", cmd.name, cmd.args.join(" ").to_string()),
-                        })
-                        .unwrap();
+                        let mut prev_command = None;
+
+                        for command in commands.iter() {
+                            let stdin = prev_command.map_or(Stdio::inherit(), |output: Child| {
+                                if output.stdout.is_some() {
+                                    Stdio::from(output.stdout.unwrap())
+                                } else {
+                                    Stdio::inherit()
+                                }
+                            });
+
+                            let output = Command::new(command.name.clone())
+                                .args(command.args.clone())
+                                .stdin(stdin)
+                                .stdout(Stdio::piped())
+                                .current_dir(terminal.path.clone())
+                                .spawn();
+
+                            match output {
+                                Ok(output) => {
+                                    prev_command = Some(output);
+                                }
+                                Err(e) => {
+                                    prev_command = None;
+                                    eprintln!("{}", e)
+                                }
+                            }
+                        }
+
+                        if let Some(final_command) = prev_command {
+                            let output = final_command.wait_with_output().unwrap();
+
+                            txc.send(Output {
+                                terminal_name: terminal.name.clone(),
+                                output: output.stdout.clone(),
+                                command: commands
+                                    .iter()
+                                    .map(|c| c.clone().to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(" | "),
+                            })
+                            .unwrap();
+                        }
                     });
                 }
 

@@ -1,10 +1,14 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Command {
     pub name: String,
     pub args: Vec<String>,
 }
 
 impl Command {
+    pub fn to_string(self) -> String {
+        format!("{} {}", self.name, self.args.join(" "))
+    }
+
     pub fn from_input(input: String) -> Self {
         let things = {
             let mut iter = Vec::new();

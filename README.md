@@ -50,13 +50,13 @@ Create a yaml file with your projects that you want to multiplex the commands.
 
 - Properly parsing single/double quoted arguments
 - Using pipelines in multiple terminals
-- Lock and run a simple command only in a couple of terminals
+- Pin and run a simple command only in a couple of terminals
 
 ``` bash
-> lock PJ1 PJ3
+> pin PJ1 PJ3
 > ... run {command}
 [PJ1]> {command}
 [PJ3]> {command}
 
-> unlock
+> unpin
 ```
