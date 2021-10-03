@@ -1,9 +1,8 @@
-# sila
+# sila@0.2.0
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
 
 _sila_ - reads [shila] in pali language stands for morality;
-
 
 ## Install
 
@@ -14,6 +13,7 @@ cargo install sila
 ```
 
 ## Configure
+
 Create a yaml file with your projects that you want to multiplex the commands.
 
 ```yaml
@@ -46,13 +46,29 @@ Create a yaml file with your projects that you want to multiplex the commands.
 ...
 ```
 
-## Improvement plan
+## Features
 
-- Properly parsing single/double quoted arguments
-- Using pipelines in multiple terminals
-- Pin and run a simple command only in a couple of terminals
+### Piping commands
 
-``` bash
+```bash
+> cat Cargo.toml | grep version
+
+[PJ1]> cat Cargo.toml | grep version
+version = "0.1.0"
+
+[PJ2]> cat Cargo.toml | grep version
+version = "0.2.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[PJ3]> cat Cargo.toml | grep version
+version = "0.1.0"
+```
+
+## Under development
+
+- pin/unpin terminals and run a simple command only in a couple of terminals
+
+```bash
 > pin PJ1 PJ3
 > ... run {command}
 [PJ1]> {command}
