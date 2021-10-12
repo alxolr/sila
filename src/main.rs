@@ -15,7 +15,7 @@ mod command;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    version = "0.2.0",
+    version = "0.3.0",
     about = "Terminal multiplexer",
     author = "Alexandru Olaru <alxolr@gmail.com>",
     rename_all = "kebab-case"
@@ -45,8 +45,11 @@ fn run() -> Result<(), Box<dyn Error>> {
     let len = terminals.len();
     let (tx, rx) = mpsc::channel();
 
+    let mut pinned_terminals: Vec<Terminal> = vec![];
+
     loop {
-        let clone_terminals = terminals.clone();
+        let clone_terminals = resolve_terminals(pinned_terminals.clone(), terminals.clone());
+        let terminal_len = clone_terminals.len();
         print!("> ");
         stdout().flush().unwrap();
 
@@ -66,8 +69,44 @@ fn run() -> Result<(), Box<dyn Error>> {
             vec
         };
 
-        match commands.first().unwrap().name.as_ref() {
+        let first_command = commands.first().unwrap().clone();
+
+        match first_command.name.as_ref() {
             "exit" => break,
+            "pin" => {
+                pinned_terminals = vec![];
+                for name in first_command.args {
+                    let terminal = terminals.iter().find(|t| t.name == name);
+
+                    if terminal.is_some() {
+                        pinned_terminals.push(terminal.unwrap().clone())
+                    }
+                }
+            }
+            "unpin" => {
+                if first_command.args.len() > 0 {
+                    for name in first_command.args {
+                        let index = pinned_terminals.iter().position(|t| t.name == name);
+
+                        if index.is_some() {
+                            pinned_terminals.remove(index.unwrap());
+                        }
+                    }
+                } else {
+                    // unpin every terminal
+                    pinned_terminals = vec![];
+                }
+            }
+            "list" => {
+                for terminal in &terminals {
+                    println!("{}", terminal.name)
+                }
+            }
+            "pinned" => {
+                for terminal in &pinned_terminals {
+                    println!("{}", terminal.name)
+                }
+            }
             "count" => println!("{} terminals", len),
             _ => {
                 let arc_cmds = Arc::new(commands);
@@ -125,7 +164,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                     });
                 }
 
-                for _ in 0..len {
+                for _ in 0..terminal_len {
                     let received = rx.recv().unwrap();
                     println!(
                         "[{}]> {}\n{}",
@@ -139,6 +178,16 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn resolve_terminals(pinned_terminals: Vec<Terminal>, terminals: Vec<Terminal>) -> Vec<Terminal> {
+    // check if there are any pinned terminals
+    // then resolve only those
+    if pinned_terminals.len() > 0 {
+        pinned_terminals
+    } else {
+        terminals
+    }
 }
 
 fn main() {
