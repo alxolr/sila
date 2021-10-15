@@ -9,9 +9,11 @@ use std::thread;
 use std::{io::BufReader, path::PathBuf};
 use structopt::StructOpt;
 
-use crate::command::Command as SilaCommand;
+use crate::help::Help;
+use crate::input_line::InputLine;
 
-mod command;
+mod help;
+mod input_line;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -60,11 +62,11 @@ fn run() -> Result<(), Box<dyn Error>> {
             input
                 .split('|')
                 .into_iter()
-                .map(|cmd| SilaCommand::from_input(cmd.to_string()))
-                .collect::<Vec<SilaCommand>>()
+                .map(|cmd| InputLine::from_input(cmd.to_string()))
+                .collect::<Vec<InputLine>>()
         } else {
             let mut vec = Vec::new();
-            vec.push(SilaCommand::from_input(input));
+            vec.push(InputLine::from_input(input));
 
             vec
         };
@@ -72,6 +74,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         let first_command = commands.first().unwrap().clone();
 
         match first_command.name.as_ref() {
+            "help" => Help::display(),
             "exit" => break,
             "pin" => {
                 pinned_terminals = vec![];
@@ -99,11 +102,6 @@ fn run() -> Result<(), Box<dyn Error>> {
             }
             "list" => {
                 for terminal in &terminals {
-                    println!("{}", terminal.name)
-                }
-            }
-            "pinned" => {
-                for terminal in &pinned_terminals {
                     println!("{}", terminal.name)
                 }
             }

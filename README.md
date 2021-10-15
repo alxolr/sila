@@ -1,4 +1,4 @@
-# sila@0.2.0
+# sila@0.3.0
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
 
@@ -64,7 +64,7 @@ serde = { version = "1.0", features = ["derive"] }
 version = "0.1.0"
 ```
 
-## Under development
+### Pinning terminals
 
 - pin/unpin terminals and run a simple command only in a couple of terminals
 
@@ -74,5 +74,20 @@ version = "0.1.0"
 [PJ1]> {command}
 [PJ3]> {command}
 
-> unpin
+> unpin PJ1
+>... run {command}
+[PJ3]> {command}
+...
+```
+
+### Helper commands
+
+```bash
+> help
+
+list                      List the terminal names.
+pin     <term1> <term2>   Pin one or multiple terminals separated by space. Following commands will be run on top of pinned ones.
+unpin   [term1]           Unpin all terminals if no argument is provided or the specific ones.
+count                     Count the number of terminals.
+exit                      Close the application.
 ```

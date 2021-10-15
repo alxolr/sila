@@ -1,8 +1,9 @@
 [package]
 name = "sila"
 version = "0.3.0"
-description = "A command line tool to multiplex the same command in multiple terminals" 
+description = "A command line multiplexer" 
 edition = "2018"
+authors = ["Alexandru Olaru <alxolr@gmail.com>"]
 license = "MIT OR Apache-2.0"
 keywords = ["cli", "productivity"]
 repository = "https://github.com/alxolr/sila"
@@ -11,11 +12,9 @@ include = [
     "Cargo.toml",
 ]
 
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 serde_yaml = "0.8.17"
 serde = { version = "1.0", features = ["derive"] }
 structopt = "0"
-
+toml = "0"
