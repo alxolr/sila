@@ -1,31 +1,10 @@
-use serde::Deserialize;
-use std::fs;
-use toml;
-
-#[derive(Deserialize, Debug)]
-struct Config {
-    package: Package,
-}
-
-#[derive(Deserialize, Debug)]
-struct Package {
-    name: String,
-    description: String,
-    version: String,
-    authors: Vec<String>,
-}
-
 pub struct Help;
 
 impl Help {
     pub fn display() {
-        let contents =
-            fs::read_to_string("Cargo.toml").expect("Could not load the Cargo toml file.");
-        let config: Config = toml::from_str(&contents).unwrap();
-
-        println!("\n{}@{}", config.package.name, config.package.version);
-        println!("{}", config.package.description);
-        println!("created by {}", config.package.authors.join(""));
+        println!("\nsila@0.3.1");
+        println!("A command line multiplexer.");
+        println!("created by  Alexandru Olaru <alxolr@gmail.com>");
         println!("\nCOMMANDS:");
         vec![
             (
