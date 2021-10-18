@@ -69,12 +69,12 @@ version = "0.1.0"
 - pin/unpin terminals and run a simple command only in a couple of terminals
 
 ```bash
-> pin PJ1 PJ3
+> sila pin PJ1 PJ3
 > ... run {command}
 [PJ1]> {command}
 [PJ3]> {command}
 
-> unpin PJ1
+> sila unpin PJ1
 >... run {command}
 [PJ3]> {command}
 ...
@@ -83,7 +83,7 @@ version = "0.1.0"
 ### Helper commands
 
 ```bash
-> help
+> sila help
 
 list                      List the terminal names.
 pin     <term1> <term2>   Pin one or multiple terminals separated by space. Following commands will be run on top of pinned ones.
