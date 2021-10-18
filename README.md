@@ -1,4 +1,4 @@
-# sila@0.3.0
+# sila@0.3.1
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
 

@@ -10,14 +10,14 @@ use std::{io::BufReader, path::PathBuf};
 use structopt::StructOpt;
 
 use crate::help::Help;
-use crate::input_line::InputLine;
+use crate::input::Input;
 
 mod help;
-mod input_line;
+mod input;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    version = "0.3.0",
+    version = "0.3.1",
     about = "Terminal multiplexer",
     author = "Alexandru Olaru <alxolr@gmail.com>",
     rename_all = "kebab-case"
@@ -62,11 +62,11 @@ fn run() -> Result<(), Box<dyn Error>> {
             input
                 .split('|')
                 .into_iter()
-                .map(|cmd| InputLine::from_input(cmd.to_string()))
-                .collect::<Vec<InputLine>>()
+                .map(|cmd| Input::new(cmd.to_string()))
+                .collect::<Vec<Input>>()
         } else {
             let mut vec = Vec::new();
-            vec.push(InputLine::from_input(input));
+            vec.push(Input::new(input));
 
             vec
         };
@@ -117,6 +117,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                         let commands = cmds.clone();
 
                         let mut prev_command = None;
+                        let mut errors = vec![];
 
                         for command in commands.iter() {
                             let stdin = prev_command.map_or(Stdio::inherit(), |output: Child| {
@@ -140,25 +141,27 @@ fn run() -> Result<(), Box<dyn Error>> {
                                 }
                                 Err(e) => {
                                     prev_command = None;
-                                    eprintln!("{}", e)
+                                    errors.push(e.to_string().clone());
                                 }
                             }
                         }
 
-                        if let Some(final_command) = prev_command {
-                            let output = final_command.wait_with_output().unwrap();
+                        let output = if let Some(final_command) = prev_command {
+                            final_command.wait_with_output().unwrap().stdout
+                        } else {
+                            errors.join(",").as_bytes().to_owned()
+                        };
 
-                            txc.send(Output {
-                                terminal_name: terminal.name.clone(),
-                                output: output.stdout.clone(),
-                                command: commands
-                                    .iter()
-                                    .map(|c| c.clone().to_string())
-                                    .collect::<Vec<_>>()
-                                    .join(" | "),
-                            })
-                            .unwrap();
-                        }
+                        txc.send(Output {
+                            terminal_name: terminal.name.clone(),
+                            output: output.clone(),
+                            command: commands
+                                .iter()
+                                .map(|c| c.clone().to_string())
+                                .collect::<Vec<_>>()
+                                .join(" | "),
+                        })
+                        .unwrap();
                     });
                 }
 
