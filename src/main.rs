@@ -11,10 +11,12 @@ use structopt::StructOpt;
 
 use crate::command_option::CommandOption;
 use crate::help::Help;
+use crate::ports::*;
 use crate::sila::Sila;
 
 mod command_option;
 mod help;
+mod ports;
 mod sila;
 mod terminal;
 
@@ -100,6 +102,7 @@ fn run() -> Result<(), Box<dyn Error>> {
                 }
             }
             "count" => println!("{} terminals", sila.active_terminals().len()),
+            
             _ => {
                 // handle the multithearded logic of running one or multiple commands into separate threads
                 let arc_cmds = Arc::new(commands);

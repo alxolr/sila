@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use crate::terminal::{self, Terminal};
+use crate::{
+    ports::{Banable, Pinable},
+    terminal::{self, Terminal},
+};
 
 pub struct Sila {
     // All terminals loaded from config file
@@ -13,7 +16,7 @@ pub struct Sila {
 
     // the set of excluded terminals
     // all the terminals in excluded set will be removed
-    pub excluded_terminals: HashSet<Terminal>,
+    pub banned_terminals: HashSet<Terminal>,
 }
 
 impl Sila {
@@ -23,31 +26,7 @@ impl Sila {
         Sila {
             all_terminals: terminals,
             pinned_terminals: HashSet::new(),
-            excluded_terminals: HashSet::new(),
-        }
-    }
-
-    pub fn pin(&mut self, terminal_names: Vec<String>) {
-        for name in terminal_names {
-            let terminal = self.all_terminals.iter().find(|t| t.name == name);
-
-            if terminal.is_some() {
-                self.pinned_terminals.insert(terminal.unwrap().clone());
-            }
-        }
-    }
-
-    pub fn unpin(&mut self, terminal_names: Vec<String>) {
-        for name in terminal_names {
-            // try to find the terminal in hashset
-            let maybe_terminal = self.pinned_terminals.iter().find(|term| term.name == name);
-
-            if maybe_terminal.is_some() {
-                // weird hack to unwrap take ownership and then pass by reference
-                // hope one day to understand what is going on there
-                let terminal = maybe_terminal.unwrap().clone();
-                self.pinned_terminals.remove(&terminal);
-            }
+            banned_terminals: HashSet::new(),
         }
     }
 
@@ -61,22 +40,84 @@ impl Sila {
                 .collect::<Vec<Terminal>>();
         }
 
-        if self.excluded_terminals.len() > 0 {
+        if self.banned_terminals.len() > 0 {
             return self
                 .all_terminals
                 .clone()
                 .into_iter()
-                .filter(|terminal| !self.excluded_terminals.contains(terminal))
+                .filter(|terminal| !self.banned_terminals.contains(terminal))
                 .collect();
         }
 
         self.all_terminals.clone()
     }
+
+    fn add_to_set(&mut self, set_type: SetType, names: Vec<String>) {
+        // pretty sure ther should be a more elegant way to do it
+        let set = match set_type {
+            SetType::Banned => &mut self.banned_terminals,
+            SetType::Pinned => &mut self.pinned_terminals,
+        };
+
+        for name in names {
+            let terminal = self.all_terminals.iter().find(|term| term.name == name);
+
+            if terminal.is_some() {
+                set.insert(terminal.unwrap().clone());
+            }
+        }
+    }
+
+    fn remove_from_set(&mut self, set_type: SetType, names: Vec<String>) {
+        let set = match set_type {
+            SetType::Banned => &mut self.banned_terminals,
+            SetType::Pinned => &mut self.pinned_terminals,
+        };
+
+        for name in names {
+            // try to find the terminal in hashset
+            let maybe_terminal = set.iter().find(|term| term.name == name);
+
+            if maybe_terminal.is_some() {
+                let terminal = maybe_terminal.unwrap().clone();
+                set.remove(&terminal);
+            }
+        }
+    }
+}
+
+impl Banable for Sila {
+    fn ban(&mut self, terminal_names: Vec<String>) {
+        self.add_to_set(SetType::Banned, terminal_names);
+    }
+
+    fn unban(&mut self, terminal_names: Vec<String>) {
+        self.remove_from_set(SetType::Banned, terminal_names)
+    }
+}
+
+impl Pinable for Sila {
+    fn pin(&mut self, terminal_names: Vec<String>) {
+        self.add_to_set(SetType::Pinned, terminal_names);
+    }
+
+    fn unpin(&mut self, terminal_names: Vec<String>) {
+        self.remove_from_set(SetType::Pinned, terminal_names)
+    }
+}
+
+enum SetType {
+    Banned,
+    Pinned,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{sila::Sila, terminal::Terminal};
+    use crate::{
+        ports::{Banable, Pinable},
+        sila::Sila,
+        terminal::Terminal,
+    };
     use std::collections::HashSet;
 
     fn get_terminals() -> Vec<Terminal> {
@@ -96,52 +137,139 @@ mod tests {
         ]
     }
 
-    #[test]
-    fn test_pinned_terminals_works_as_expected() {
-        let all_terminals = get_terminals().clone();
+    // Cool thing that you can add special helper
+    // implementation in unit tests to help you with the code
+    impl Terminal {
+        fn new(str: &str) -> Terminal {
+            Terminal {
+                name: str.to_string(),
+                path: format!("/path/{}", str.to_lowercase()).to_string(),
+            }
+        }
+    }
 
-        let active_terminals: Vec<Terminal> = all_terminals
-            .clone()
-            .into_iter()
-            .filter(|t| t.name == "T1".to_string())
-            .collect();
-
-        let pinned_terminals = active_terminals
-            .clone()
-            .into_iter()
-            .collect::<HashSet<Terminal>>();
-
-        let sila = Sila {
-            all_terminals,
-            pinned_terminals,
-            excluded_terminals: HashSet::new(),
-        };
-
-        assert_eq!(sila.active_terminals(), active_terminals);
+    fn to_hashset(vector: Vec<Terminal>) -> HashSet<Terminal> {
+        vector.clone().into_iter().collect::<HashSet<Terminal>>()
     }
 
     #[test]
-    fn test_excluded_terminals_works_as_expected() {
-        let all_terminals = get_terminals().clone();
-
-        let expected_active_terminals: Vec<Terminal> = all_terminals
-            .clone()
-            .into_iter()
-            .filter(|t| vec!["T1", "T2"].contains(&t.name.as_str()))
-            .collect();
-
-        let excluded_terminals = all_terminals
-            .clone()
-            .into_iter()
-            .skip(2)
-            .collect::<HashSet<Terminal>>();
-
+    fn test_pinned_terminals_works_as_expected() {
+        let terminals_to_pin = vec![Terminal::new("T1")];
         let sila = Sila {
-            all_terminals,
-            pinned_terminals: HashSet::new(),
-            excluded_terminals,
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: to_hashset(terminals_to_pin.clone()),
+            banned_terminals: HashSet::new(),
         };
 
-        assert_eq!(sila.active_terminals(), expected_active_terminals);
+        assert_eq!(sila.active_terminals(), terminals_to_pin);
+    }
+
+    #[test]
+    fn test_banned_terminals_works_as_expected() {
+        let banned_terminals = to_hashset(vec![Terminal::new("T3")]);
+
+        let sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals,
+        };
+
+        assert_eq!(
+            sila.active_terminals(),
+            // expects the first two terminals to be available
+            get_terminals().into_iter().take(2).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_pin_command_invalid_name() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals: HashSet::new(),
+        };
+
+        sila.pin(vec!["T4".to_string()]);
+        assert_eq!(sila.pinned_terminals, HashSet::new())
+    }
+
+    #[test]
+    fn test_pin_command_valid_name() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals: HashSet::new(),
+        };
+
+        let terminal = Terminal::new("T3");
+
+        sila.pin(vec!["T3".to_string()]);
+        let mut expected_set = HashSet::new();
+
+        expected_set.insert(terminal);
+        assert_eq!(sila.pinned_terminals, expected_set);
+    }
+
+    #[test]
+    fn test_unpin_no_arguments() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals: HashSet::new(),
+        };
+        sila.unpin(vec!["T3".to_string()]);
+
+        assert_eq!(sila.pinned_terminals, HashSet::new());
+    }
+
+    #[test]
+    fn test_unpin_with_arguments() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: to_hashset(get_terminals().clone()),
+            banned_terminals: HashSet::new(),
+        };
+
+        sila.unpin(vec!["T3".to_string()]);
+        let expected_set = get_terminals()
+            .into_iter()
+            .take(2)
+            .collect::<HashSet<Terminal>>();
+
+        assert_eq!(sila.pinned_terminals, expected_set);
+    }
+
+    #[test]
+    fn test_ban_one_terminal() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals: HashSet::new(),
+        };
+
+        sila.ban(vec!["T3".to_string()]);
+
+        assert_eq!(
+            sila.active_terminals(),
+            get_terminals()
+                .clone()
+                .into_iter()
+                .take(2)
+                .collect::<Vec<Terminal>>()
+        );
+    }
+
+    #[test]
+    fn test_unban_no_arguments() {
+        let mut sila = Sila {
+            all_terminals: get_terminals().clone(),
+            pinned_terminals: HashSet::new(),
+            banned_terminals: HashSet::new(),
+        };
+
+        sila.ban(vec!["T3".to_string()]);
+        sila.unban(vec!["T3".to_string()]);
+
+        assert_eq!(sila.active_terminals(), get_terminals().clone());
     }
 }
