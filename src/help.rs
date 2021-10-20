@@ -1,10 +1,12 @@
+use crate::{ABOUT, AUTHOR, VERSION};
+
 pub struct Help;
 
 impl Help {
     pub fn display() {
-        println!("\nsila@0.3.1");
-        println!("A command line multiplexer.");
-        println!("created by  Alexandru Olaru <alxolr@gmail.com>");
+        println!("\nsila@{}", VERSION);
+        println!("{}", ABOUT);
+        println!("created by {}", AUTHOR);
         println!("\nCOMMANDS:");
         vec![
             (

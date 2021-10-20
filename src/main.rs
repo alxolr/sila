@@ -1,35 +1,37 @@
-use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::error::Error;
 use std::io::Write;
 use std::io::{stdin, stdout};
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
-use std::{io::BufReader, path::PathBuf};
 use structopt::StructOpt;
 
+use crate::command_option::CommandOption;
 use crate::help::Help;
-use crate::input::Input;
+use crate::sila::Sila;
 
+mod command_option;
 mod help;
-mod input;
+mod sila;
+mod terminal;
+
+static VERSION: &str = "0.3.1";
+static ABOUT: &str = "A command line multiplexer.";
+static AUTHOR: &str = "Alexandru Olaru <alxolr@gmail.com>";
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    version = "0.3.1",
-    about = "Terminal multiplexer",
-    author = "Alexandru Olaru <alxolr@gmail.com>",
+    version = VERSION,
+    about = ABOUT,
+    author = AUTHOR,
     rename_all = "kebab-case"
 )]
 struct Cli {
     #[structopt(help = "Provide configuration yaml file")]
     path: PathBuf,
-}
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-struct Terminal {
-    name: String,
-    path: String,
 }
 
 #[derive(Debug)]
@@ -41,75 +43,68 @@ struct Output {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let cli = Cli::from_args();
-    let input = std::fs::File::open(cli.path).unwrap();
-    let rdr = BufReader::new(input);
-    let terminals: Vec<Terminal> = serde_yaml::from_reader(rdr).unwrap();
-    let len = terminals.len();
+    let mut sila = Sila::new(cli.path);
+
+    // define the communication channels
     let (tx, rx) = mpsc::channel();
 
-    let mut pinned_terminals: Vec<Terminal> = vec![];
-
     loop {
-        let clone_terminals = resolve_terminals(pinned_terminals.clone(), terminals.clone());
-        let terminal_len = clone_terminals.len();
+        let terminals = sila.active_terminals();
+        let terminal_len = terminals.len();
+
+        // logic to handle the drawings of the shell terminal
         print!("> ");
         stdout().flush().unwrap();
 
+        // read the input line
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
 
+        // logic to transform each line into CommandOptions if we have pipes then we will have an array of CommandOptions
+        // otherwise we will have one input
         let commands = if input.contains('|') {
             input
                 .split('|')
                 .into_iter()
-                .map(|cmd| Input::new(cmd.to_string()))
-                .collect::<Vec<Input>>()
+                .map(|cmd| CommandOption::new(cmd.to_string()))
+                .collect::<Vec<CommandOption>>()
         } else {
             let mut vec = Vec::new();
-            vec.push(Input::new(input));
+            vec.push(CommandOption::new(input));
 
             vec
         };
 
+        // we will get the first command from the array of commands and try to see if it's a helper command
         let first_command = commands.first().unwrap().clone();
 
         match first_command.name.as_ref() {
             "help" => Help::display(),
             "exit" => break,
             "pin" => {
-                pinned_terminals = vec![];
-                for name in first_command.args {
-                    let terminal = terminals.iter().find(|t| t.name == name);
-
-                    if terminal.is_some() {
-                        pinned_terminals.push(terminal.unwrap().clone())
-                    }
+                if first_command.args.len() > 0 {
+                    sila.pin(first_command.args);
                 }
             }
             "unpin" => {
                 if first_command.args.len() > 0 {
-                    for name in first_command.args {
-                        let index = pinned_terminals.iter().position(|t| t.name == name);
-
-                        if index.is_some() {
-                            pinned_terminals.remove(index.unwrap());
-                        }
-                    }
+                    sila.unpin(first_command.args);
                 } else {
                     // unpin every terminal
-                    pinned_terminals = vec![];
+                    sila.pinned_terminals = HashSet::new();
                 }
             }
             "list" => {
-                for terminal in &terminals {
+                for terminal in sila.active_terminals() {
                     println!("{}", terminal.name)
                 }
             }
-            "count" => println!("{} terminals", len),
+            "count" => println!("{} terminals", sila.active_terminals().len()),
             _ => {
+                // handle the multithearded logic of running one or multiple commands into separate threads
                 let arc_cmds = Arc::new(commands);
 
-                for terminal in clone_terminals {
+                for terminal in terminals {
                     let txc = tx.clone();
                     let cmds = Arc::clone(&arc_cmds);
 
@@ -179,16 +174,6 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
-}
-
-fn resolve_terminals(pinned_terminals: Vec<Terminal>, terminals: Vec<Terminal>) -> Vec<Terminal> {
-    // check if there are any pinned terminals
-    // then resolve only those
-    if pinned_terminals.len() > 0 {
-        pinned_terminals
-    } else {
-        terminals
-    }
 }
 
 fn main() {

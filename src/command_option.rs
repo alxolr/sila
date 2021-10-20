@@ -1,10 +1,10 @@
 #[derive(Debug, PartialEq, Clone)]
-pub struct Input {
+pub struct CommandOption {
     pub name: String,
     pub args: Vec<String>,
 }
 
-impl Input {
+impl CommandOption {
     pub fn to_string(self) -> String {
         format!("{} {}", self.name, self.args.join(" "))
     }
@@ -39,7 +39,7 @@ impl Input {
         let name = things.first().unwrap().clone();
         let args: Vec<String> = things.into_iter().skip(1).collect();
 
-        Input { name, args }
+        CommandOption { name, args }
     }
 }
 
@@ -62,6 +62,7 @@ fn count_occurences(vec: &Vec<char>, c: &char) -> usize {
 fn is_even(nb: usize) -> bool {
     nb % 2 == 0
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,21 +72,21 @@ mod tests {
         let scenarios = vec![
             (
                 "git".to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: Vec::new(),
                 },
             ),
             (
                 "git describe".to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: vec!["describe".to_string()],
                 },
             ),
             (
                 "git tag -a -m 'Some test'".to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: vec![
                         "tag".to_string(),
@@ -97,7 +98,7 @@ mod tests {
             ),
             (
                 "git tag -a -m 'Some test' --dry_run".to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: vec![
                         "tag".to_string(),
@@ -110,7 +111,7 @@ mod tests {
             ),
             (
                 r#"git tag -a -m "Some test" --dry_run"#.to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: vec![
                         "tag".to_string(),
@@ -123,7 +124,7 @@ mod tests {
             ),
             (
                 r#"git tag -a -m "Some test 'appears here'" --dry_run"#.to_string(),
-                Input {
+                CommandOption {
                     name: "git".to_string(),
                     args: vec![
                         "tag".to_string(),
@@ -136,14 +137,14 @@ mod tests {
             ),
             (
                 r#"ncu "/@conform\/batch.*/""#.to_string(),
-                Input {
+                CommandOption {
                     name: "ncu".to_string(),
                     args: vec!["\"/@conform\\/batch.*/\"".to_string()],
                 },
             ),
         ];
         for (input, output) in scenarios {
-            assert_eq!(Input::new(input), output);
+            assert_eq!(CommandOption::new(input), output);
         }
     }
 
