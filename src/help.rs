@@ -1,6 +1,6 @@
 use enum_iterator::IntoEnumIterator;
 
-use crate::{ports::Subcommands, ABOUT, AUTHOR, VERSION};
+use crate::{ports::Commands, ABOUT, AUTHOR, VERSION};
 
 pub struct Help;
 
@@ -12,35 +12,35 @@ impl Help {
         println!("\nCOMMANDS:");
 
         let mut commands_help = vec![];
-        for command in Subcommands::into_enum_iter() {
+        for command in Commands::into_enum_iter() {
             let cmd = match command {
-                Subcommands::Pin =>
+                Commands::Pin =>
                 (
                     "pin",
                     "<term1> <term2>",
                     "Pin one or multiple terminals separated by space. Following commands will run on top of pinned ones only."
                 ),
-                Subcommands::Unpin =>
+                Commands::Unpin =>
                 (
                     "unpin",
                     "[term1]",
                     "Unpin all terminals if no argument is provided or the specific ones.",
                 ),
-                Subcommands::Ban => 
+                Commands::Ban => 
                 (
                     "ban",
                     "<term1> <term2>",
                     "Ban one or multiple terminals separated by space. The following commands will not run in banned terminals"
                 ),
-                Subcommands::Unban => 
+                Commands::Unban => 
                 (
                     "unban",
                     "[term2]",
                     "Unban the specificed terminals or all if no arguments provided."
                 ),
-                Subcommands::List => ("list","","List the active terminal names."),
-                Subcommands::Help => ("help", "", "Displays help information."),
-                Subcommands::Exit => ("exit", "", "Close the application.")
+                Commands::List => ("list","","List the active terminal names."),
+                Commands::Help => ("help", "", "Displays help information."),
+                Commands::Exit => ("exit", "", "Close the application.")
             };
 
             commands_help.push(cmd);
