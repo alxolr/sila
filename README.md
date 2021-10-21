@@ -1,4 +1,5 @@
-# sila@0.3.1
+# sila@0.3.1 [![Build Status](https://app.travis-ci.com/alxolr/sila.svg?branch=main)](https://app.travis-ci.com/alxolr/sila)[![codecov](https://codecov.io/gh/alxolr/sila/branch/main/graph/badge.svg?token=KPKR339KY4)](https://codecov.io/gh/alxolr/sila)
+
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
 

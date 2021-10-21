@@ -1,23 +1,20 @@
 language: rust
 
-sudo: required
-
-rust:
-  - nightly
-
-cache: cargo
-
 before_install:
   - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
-
 
 before_cache:
   - rm -rf "$TRAVIS_HOME/.cargo/registry/src"
 
+matrix:
+  include:
+    - os: linux
+      rust: nightly
+
 script:
-  - rustup component add llvm-tools-preview
-  - export RUSTFLAGS="-Zinstrument-coverage"
-  - cargo build --verbose --workspace
-  - LLVM_PROFILE_FILE="sila-%p-%m.profraw" cargo test --verbose
-  - ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
-  - bash <(curl -s https://codecov.io/bash) -f lcov.info
+    - rustup component add llvm-tools-preview
+    - export RUSTFLAGS="-Zinstrument-coverage"
+    - cargo build --verbose
+    - LLVM_PROFILE_FILE="sila-%p-%m.profraw" cargo test --verbose
+    - ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+    - bash <(curl -s https://codecov.io/bash) -f lcov.info
