@@ -79,7 +79,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
         // we will get the first command from the array of commands and try to see if it's a helper command
         let command = commands.first().unwrap().clone();
-        let command_type = Commands::to_type(command.name.as_ref());
+        let command_type = Commands::to_enum(command.name.as_ref());
 
         if command_type.is_some() {
             match command_type.unwrap() {
