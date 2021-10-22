@@ -31,8 +31,9 @@ static AUTHOR: &str = "Alexandru Olaru <alxolr@gmail.com>";
     author = AUTHOR,
     rename_all = "kebab-case"
 )]
-struct Cli {
-    #[structopt(help = "Provide configuration yaml file")]
+struct Opt {
+    #[structopt(short, default_value = "./sila_config.yaml")]
+    /// Provide the file path
     path: PathBuf,
 }
 
@@ -44,7 +45,7 @@ struct Output {
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
-    let cli = Cli::from_args();
+    let cli = Opt::from_args();
     let mut sila = Sila::new(cli.path);
 
     // define the communication channels
