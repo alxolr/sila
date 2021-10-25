@@ -33,7 +33,7 @@ static AUTHOR: &str = "Alexandru Olaru <alxolr@gmail.com>";
 )]
 struct Opt {
     #[structopt(short, default_value = "./sila_config.yaml")]
-    /// Provide the file path
+    /// Provide the config file path
     path: PathBuf,
 }
 
@@ -62,6 +62,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         // read the input line
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
+
+        // stdin().
+
 
         // logic to transform each line into CommandOptions if we have pipes then we will have an array of CommandOptions
         // otherwise we will have one input
