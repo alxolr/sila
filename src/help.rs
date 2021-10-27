@@ -5,11 +5,14 @@ use crate::{ports::Commands, ABOUT, AUTHOR, VERSION};
 pub struct Help;
 
 impl Help {
-    pub fn display() {
-        println!("\nsila@{}", VERSION);
-        println!("{}", ABOUT);
-        println!("created by {}", AUTHOR);
-        println!("\nCOMMANDS:");
+    pub fn display() -> String {
+        let mut help_str = String::new();
+        
+        help_str.push_str(&format!("sila@{}\n", VERSION));
+        help_str.push_str(&format!("{}\n", ABOUT));
+        help_str.push_str(&format!("created by {}\n", AUTHOR));
+        help_str.push_str("\nCOMMANDS:\n");
+
 
         let mut commands_help = vec![];
         for command in Commands::into_enum_iter() {
@@ -48,8 +51,19 @@ impl Help {
 
         commands_help
             .iter()
-            .for_each(|item| println!("{0: <7} {1: <17} {2: <10}", item.0, item.1, item.2));
+            .for_each(|item| help_str.push_str(&format!("{0: <7} {1: <17} {2: <10}\n", item.0, item.1, item.2)));
 
-        println!("");
+        help_str
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test_display_command_exists() {
+        let display = Help::display();
+        assert_eq!(display.contains("one or multiple"), true);
     }
 }

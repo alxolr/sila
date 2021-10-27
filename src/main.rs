@@ -65,7 +65,6 @@ fn run() -> Result<(), Box<dyn Error>> {
 
         // stdin().
 
-
         // logic to transform each line into CommandOptions if we have pipes then we will have an array of CommandOptions
         // otherwise we will have one input
         let commands = if input.contains('|') {
@@ -87,7 +86,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
         if command_type.is_some() {
             match command_type.unwrap() {
-                Commands::Help => Help::display(),
+                Commands::Help => println!("{}", Help::display()),
                 Commands::Ban => {
                     if command.args.len() > 0 {
                         sila.ban(command.args);
