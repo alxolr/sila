@@ -20,7 +20,7 @@ mod ports;
 mod sila;
 mod terminal;
 
-static VERSION: &str = "0.3.1";
+static VERSION: &str = "0.3.2";
 static ABOUT: &str = "A command line multiplexer.";
 static AUTHOR: &str = "Alexandru Olaru <alxolr@gmail.com>";
 

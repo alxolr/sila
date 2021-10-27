@@ -7,15 +7,15 @@ use crate::{
 };
 
 pub struct Sila {
-    // All terminals loaded from config file
+    /// All terminals loaded from config file
     pub all_terminals: Vec<Terminal>,
 
-    // the set of pinned terminals has the highest priority
-    // if this one is empty it will look into excluded set
+    /// the set of pinned terminals has the highest priority
+    /// if this one is empty it will look into excluded set
     pub pinned_terminals: HashSet<Terminal>,
 
-    // the set of excluded terminals
-    // all the terminals in excluded set will be removed
+    /// the set of excluded terminals
+    /// all the terminals in excluded set will be removed
     pub banned_terminals: HashSet<Terminal>,
 }
 

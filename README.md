@@ -1,4 +1,4 @@
-# sila@0.3.1 [![Build Status](https://app.travis-ci.com/alxolr/sila.svg?branch=main)](https://app.travis-ci.com/alxolr/sila)[![codecov](https://codecov.io/gh/alxolr/sila/branch/main/graph/badge.svg?token=KPKR339KY4)](https://codecov.io/gh/alxolr/sila)
+# sila@0.3.2 [![Build Status](https://app.travis-ci.com/alxolr/sila.svg?branch=main)](https://app.travis-ci.com/alxolr/sila)[![codecov](https://codecov.io/gh/alxolr/sila/branch/main/graph/badge.svg?token=KPKR339KY4)](https://codecov.io/gh/alxolr/sila)
 
 
 It's a simple terminal multiplexer written in rust that is operating using a config yaml file.
@@ -86,9 +86,16 @@ version = "0.1.0"
 ```bash
 > help
 
-list                      List the terminal names.
-pin     <term1> <term2>   Pin one or multiple terminals separated by space. Following commands will be run on top of pinned ones.
+sila@0.3.1
+A command line multiplexer.
+created by Alexandru Olaru <alxolr@gmail.com>
+
+COMMANDS:
+pin     <term1> <term2>   Pin one or multiple terminals separated by space. Following commands will run on top of pinned ones only.
 unpin   [term1]           Unpin all terminals if no argument is provided or the specific ones.
-count                     Count the number of terminals.
+ban     <term1> <term2>   Ban one or multiple terminals separated by space. The following commands will not run in banned terminals
+unban   [term2]           Unban the specificed terminals or all if no arguments provided.
+list                      List the active terminal names.
+help                      Displays help information.
 exit                      Close the application.
 ```
