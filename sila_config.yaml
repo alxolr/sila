@@ -1,0 +1,4 @@
+- name: sila
+  path: /home/alxolr/Work/cli-tools/sila
+- name: search
+  path: /home/alxolr/Work/cli-tools/search

@@ -63,10 +63,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
 
-        // stdin().
-
-        // logic to transform each line into CommandOptions if we have pipes then we will have an array of CommandOptions
-        // otherwise we will have one input
         let commands = if input.contains('|') {
             input
                 .split('|')

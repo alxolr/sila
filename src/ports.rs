@@ -1,6 +1,6 @@
 use enum_iterator::IntoEnumIterator;
 
-#[derive(Debug, IntoEnumIterator)]
+#[derive(Debug, IntoEnumIterator, Eq, PartialEq)]
 pub enum Commands {
     Pin,
     Unpin,
@@ -35,4 +35,20 @@ pub trait Pinable {
 pub trait Banable {
     fn ban(&mut self, names: Vec<String>);
     fn unban(&mut self, names: Vec<String>);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn test_to_enum_returns_good_part() {
+        let scenarios = vec!["pin", "unpin", "ban", "unban", "list", "help", "exit"];
+
+        for scenario in scenarios {
+            assert!(Commands::to_enum(scenario).is_some())
+        }
+
+        assert_eq!(Commands::to_enum("test"), None);
+    }
 }

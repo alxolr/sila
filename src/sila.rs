@@ -6,6 +6,7 @@ use crate::{
     terminal::{self, Terminal},
 };
 
+/// Main logic of the application of handling terminals is done here
 pub struct Sila {
     /// All terminals loaded from config file
     pub all_terminals: Vec<Terminal>,

@@ -63,7 +63,6 @@ mod tests {
 
     #[test]
     fn test_display_command_exists() {
-        let display = Help::display();
-        assert_eq!(display.contains("one or multiple"), true);
+        assert!(Help::display().contains("one or multiple"));
     }
 }
