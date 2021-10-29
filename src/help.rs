@@ -1,6 +1,6 @@
 use enum_iterator::IntoEnumIterator;
 
-use crate::{ports::Commands, ABOUT, AUTHOR, VERSION};
+use crate::{ports::HelperCommand, ABOUT, AUTHOR, VERSION};
 
 pub struct Help;
 
@@ -15,35 +15,35 @@ impl Help {
 
 
         let mut commands_help = vec![];
-        for command in Commands::into_enum_iter() {
+        for command in HelperCommand::into_enum_iter() {
             let cmd = match command {
-                Commands::Pin =>
+                HelperCommand::Pin =>
                 (
                     "pin",
                     "<term1> <term2>",
                     "Pin one or multiple terminals separated by space. Following commands will run on top of pinned ones only."
                 ),
-                Commands::Unpin =>
+                HelperCommand::Unpin =>
                 (
                     "unpin",
                     "[term1]",
                     "Unpin all terminals if no argument is provided or the specific ones.",
                 ),
-                Commands::Ban => 
+                HelperCommand::Ban => 
                 (
                     "ban",
                     "<term1> <term2>",
                     "Ban one or multiple terminals separated by space. The following commands will not run in banned terminals"
                 ),
-                Commands::Unban => 
+                HelperCommand::Unban => 
                 (
                     "unban",
                     "[term2]",
                     "Unban the specificed terminals or all if no arguments provided."
                 ),
-                Commands::List => ("list","","List the active terminal names."),
-                Commands::Help => ("help", "", "Displays help information."),
-                Commands::Exit => ("exit", "", "Close the application.")
+                HelperCommand::List => ("list","","List the active terminal names."),
+                HelperCommand::Help => ("help", "", "Displays help information."),
+                HelperCommand::Exit => ("exit", "", "Close the application.")
             };
 
             commands_help.push(cmd);
@@ -59,7 +59,7 @@ impl Help {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{help::Help};
 
     #[test]
     fn test_display_command_exists() {

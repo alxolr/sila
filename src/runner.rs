@@ -1,13 +1,24 @@
-use std::collections::HashSet;
 use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc;
+use std::thread;
+use std::{collections::HashSet, sync::Arc};
 
+#[derive(Debug)]
+pub struct Output {
+    terminal_name: String,
+    output: Vec<u8>,
+    command: String,
+}
 use crate::{
-    ports::{Banable, Pinable},
+    command_option::CommandOption,
+    help::Help,
+    ports::{Banable, HelperCommand, Pinable},
     terminal::{self, Terminal},
 };
 
 /// Main logic of the application of handling terminals is done here
-pub struct Sila {
+pub struct Runner {
     /// All terminals loaded from config file
     pub all_terminals: Vec<Terminal>,
 
@@ -20,11 +31,11 @@ pub struct Sila {
     pub banned_terminals: HashSet<Terminal>,
 }
 
-impl Sila {
+impl Runner {
     pub fn new(path: PathBuf) -> Self {
         let terminals = terminal::Config::load(path);
 
-        Sila {
+        Runner {
             all_terminals: terminals,
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),
@@ -51,6 +62,115 @@ impl Sila {
         }
 
         self.all_terminals.clone()
+    }
+
+    pub fn execute_cmds(&self, commands: Vec<CommandOption>) {
+        let (tx, rx) = mpsc::channel();
+        let arc_cmds = Arc::new(commands);
+        let terminals = self.active_terminals();
+        let active_terminal_count = terminals.len();
+
+        for terminal in terminals {
+            let txc = tx.clone();
+            let cmds = Arc::clone(&arc_cmds);
+
+            thread::spawn(move || {
+                let commands = cmds.clone();
+
+                let mut prev_command = None;
+                let mut errors = vec![];
+
+                for command in commands.iter() {
+                    let stdin = prev_command.map_or(Stdio::inherit(), |output: Child| {
+                        if output.stdout.is_some() {
+                            Stdio::from(output.stdout.unwrap())
+                        } else {
+                            Stdio::inherit()
+                        }
+                    });
+
+                    let output = Command::new(command.name.clone())
+                        .args(command.args.clone())
+                        .stdin(stdin)
+                        .stdout(Stdio::piped())
+                        .current_dir(terminal.path.clone())
+                        .spawn();
+
+                    match output {
+                        Ok(output) => {
+                            prev_command = Some(output);
+                        }
+                        Err(e) => {
+                            prev_command = None;
+                            errors.push(e.to_string().clone());
+                        }
+                    }
+                }
+
+                let output = if let Some(final_command) = prev_command {
+                    final_command.wait_with_output().unwrap().stdout
+                } else {
+                    errors.join(",").as_bytes().to_owned()
+                };
+
+                txc.send(Output {
+                    terminal_name: terminal.name.clone(),
+                    output: output.clone(),
+                    command: commands
+                        .iter()
+                        .map(|c| c.clone().to_string())
+                        .collect::<Vec<_>>()
+                        .join(" | "),
+                })
+                .unwrap();
+            });
+        }
+
+        for _ in 0..active_terminal_count {
+            let received = rx.recv().unwrap();
+            println!(
+                "[{}]> {}\n{}",
+                received.terminal_name,
+                received.command,
+                std::str::from_utf8(&received.output).unwrap()
+            );
+        }
+    }
+
+    pub fn execute_helper_cmd(&mut self, command: CommandOption) {
+        match HelperCommand::to_enum(&command.name).unwrap() {
+            HelperCommand::Help => println!("{}", Help::display()),
+            HelperCommand::Ban => {
+                if command.args.len() > 0 {
+                    self.ban(command.args);
+                }
+            }
+            HelperCommand::Unban => {
+                if command.args.len() > 0 {
+                    self.unban(command.args);
+                } else {
+                    self.banned_terminals = HashSet::new();
+                }
+            }
+            HelperCommand::Pin => {
+                if command.args.len() > 0 {
+                    self.pin(command.args);
+                }
+            }
+            HelperCommand::Unpin => {
+                if command.args.len() > 0 {
+                    self.unban(command.args);
+                } else {
+                    self.pinned_terminals = HashSet::new();
+                }
+            }
+            HelperCommand::List => {
+                for terminal in self.active_terminals() {
+                    println!("{}", terminal.name);
+                }
+            }
+            HelperCommand::Exit => std::process::exit(0),
+        };
     }
 
     fn add_to_set(&mut self, set_type: SetType, names: Vec<String>) {
@@ -87,7 +207,7 @@ impl Sila {
     }
 }
 
-impl Banable for Sila {
+impl Banable for Runner {
     fn ban(&mut self, terminal_names: Vec<String>) {
         self.add_to_set(SetType::Banned, terminal_names);
     }
@@ -97,7 +217,7 @@ impl Banable for Sila {
     }
 }
 
-impl Pinable for Sila {
+impl Pinable for Runner {
     fn pin(&mut self, terminal_names: Vec<String>) {
         self.add_to_set(SetType::Pinned, terminal_names);
     }
@@ -116,7 +236,7 @@ enum SetType {
 mod tests {
     use crate::{
         ports::{Banable, Pinable},
-        sila::Sila,
+        runner::Runner,
         terminal::Terminal,
     };
     use std::collections::HashSet;
@@ -156,7 +276,7 @@ mod tests {
     #[test]
     fn test_pinned_terminals_works_as_expected() {
         let terminals_to_pin = vec![Terminal::new("T1")];
-        let sila = Sila {
+        let sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: to_hashset(terminals_to_pin.clone()),
             banned_terminals: HashSet::new(),
@@ -169,7 +289,7 @@ mod tests {
     fn test_banned_terminals_works_as_expected() {
         let banned_terminals = to_hashset(vec![Terminal::new("T3")]);
 
-        let sila = Sila {
+        let sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals,
@@ -184,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_pin_command_invalid_name() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),
@@ -196,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_pin_command_valid_name() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),
@@ -213,7 +333,7 @@ mod tests {
 
     #[test]
     fn test_unpin_no_arguments() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),
@@ -225,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_unpin_with_arguments() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: to_hashset(get_terminals().clone()),
             banned_terminals: HashSet::new(),
@@ -242,7 +362,7 @@ mod tests {
 
     #[test]
     fn test_ban_one_terminal() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),
@@ -262,7 +382,7 @@ mod tests {
 
     #[test]
     fn test_unban_no_arguments() {
-        let mut sila = Sila {
+        let mut sila = Runner {
             all_terminals: get_terminals().clone(),
             pinned_terminals: HashSet::new(),
             banned_terminals: HashSet::new(),

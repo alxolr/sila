@@ -86,7 +86,7 @@ version = "0.1.0"
 ```bash
 > help
 
-sila@0.3.1
+sila@0.3.2
 A command line multiplexer.
 created by Alexandru Olaru <alxolr@gmail.com>
 

@@ -41,6 +41,23 @@ impl CommandOption {
 
         CommandOption { name, args }
     }
+
+    pub fn from_input(input: String) -> Vec<CommandOption> {
+        let commands = if input.contains('|') {
+            input
+                .split('|')
+                .into_iter()
+                .map(|cmd| CommandOption::new(cmd.to_string()))
+                .collect::<Vec<CommandOption>>()
+        } else {
+            let mut vec = Vec::new();
+            vec.push(CommandOption::new(input));
+
+            vec
+        };
+
+        commands
+    }
 }
 
 fn quotes_are_closed(buffer: &Vec<char>) -> bool {
